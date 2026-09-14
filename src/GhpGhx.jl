@@ -3,6 +3,14 @@ module GhpGhx
 export ghp_model
 export get_GhpGhx_results_for_reopt
 
+# Julia >= 1.13 requires the ccall library name to be a literal or a global constant,
+# so these paths cannot be built inline inside the ccall expressions.
+const LIB_DST = normpath(joinpath(@__DIR__, "../ghxmodel/dst.so"))
+const LIB_TESS_LINUX = normpath(joinpath(@__DIR__, "../ghxmodel/tess_linux.so"))
+const LIB_TESS_WINDOWS = normpath(joinpath(@__DIR__, "../ghxmodel/tess_windows.so"))
+const LIB_TESS_INTEL_MAC = normpath(joinpath(@__DIR__, "../ghxmodel/tess_intel_mac.so"))
+const LIB_TESS_ARM_MAC = normpath(joinpath(@__DIR__, "../ghxmodel/tess_arm_mac.so"))
+
 include("inputs.jl")
 
 include("results.jl")
@@ -36,7 +44,7 @@ Return the mutated results struct.
 
 """
 function size_borefield(p)
-    lib = normpath(joinpath(@__DIR__,"../ghxmodel/tess_windows.so"))
+    lib = LIB_TESS_WINDOWS
     chmod(lib, filemode(lib) | 0o755)
     # Declare and initialize arrays which get passed and mutated by GHX model (different length arrays used for different models)
     INFO = zeros(Int32, 15)  # Used for initialization and incrementing the number of times the GHX model is called by timestep
@@ -337,7 +345,7 @@ function size_borefield(p)
                         XIN[4] = p.AmbientTemperature[hr]
                         XIN[5] = 1.0
                         # Call the ground model
-                        ccall((:type557_, normpath(joinpath(@__DIR__,"../ghxmodel/dst.so"))), Cvoid, 
+                        ccall((:type557_, LIB_DST), Cvoid, 
                         (Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Int64}, Ptr{Int64}), 
                         TimeArray, XIN, OUT, PAR, INFO, ErrorFound)
                     elseif p.ghx_model == "TESS"
@@ -346,20 +354,20 @@ function size_borefield(p)
                         XIN[3] = p.AmbientTemperature[hr]
                         XIN[4] = p.AmbientTemperature[hr]
                         if Sys.islinux()
-                            ccall((:type1373_, normpath(joinpath(@__DIR__,"../ghxmodel/tess_linux.so"))), Cvoid, 
+                            ccall((:type1373_, LIB_TESS_LINUX), Cvoid, 
                             (Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Int64}, Ptr{Int64}), 
                             TimeArray, XIN, OUT, PAR, INFO, ErrorFound)
                         elseif Sys.iswindows()
-                            ccall((:type1373_, normpath(joinpath(@__DIR__,"../ghxmodel/tess_windows.so"))), Cvoid, 
+                            ccall((:type1373_, LIB_TESS_WINDOWS), Cvoid, 
                             (Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Int64}, Ptr{Int64}), 
                             TimeArray, XIN, OUT, PAR, INFO, ErrorFound)
                         elseif Sys.isapple()
                             if Sys.ARCH == :x86_64
-                                ccall((:type1373_, normpath(joinpath(@__DIR__,"../ghxmodel/tess_intel_mac.so"))), Cvoid, 
+                                ccall((:type1373_, LIB_TESS_INTEL_MAC), Cvoid, 
                                 (Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Int64}, Ptr{Int64}), 
                                 TimeArray, XIN, OUT, PAR, INFO, ErrorFound)
                             elseif Sys.ARCH == :aarch64
-                                ccall((:type1373_, normpath(joinpath(@__DIR__,"../ghxmodel/tess_arm_mac.so"))), Cvoid, 
+                                ccall((:type1373_, LIB_TESS_ARM_MAC), Cvoid, 
                                 (Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Int64}, Ptr{Int64}), 
                                 TimeArray, XIN, OUT, PAR, INFO, ErrorFound)
                             else
@@ -446,25 +454,25 @@ function size_borefield(p)
                     # Call the ground heat exchanger model to clean up as the timestep is complete (assign Ti=Tf)
                     INFO[13] = 1
                     if p.ghx_model == "DST"
-                        ccall((:type557_, normpath(joinpath(@__DIR__,"../ghxmodel/dst.so"))), Cvoid, 
+                        ccall((:type557_, LIB_DST), Cvoid, 
                         (Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Int64}, Ptr{Int64}), 
                         TimeArray, XIN, OUT, PAR, INFO, ErrorFound)
                     elseif p.ghx_model == "TESS"
                         if Sys.islinux()
-                            ccall((:type1373_, normpath(joinpath(@__DIR__,"../ghxmodel/tess_linux.so"))), Cvoid, 
+                            ccall((:type1373_, LIB_TESS_LINUX), Cvoid, 
                             (Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Int64}, Ptr{Int64}), 
                             TimeArray, XIN, OUT, PAR, INFO, ErrorFound)
                         elseif Sys.iswindows()
-                            ccall((:type1373_, normpath(joinpath(@__DIR__,"../ghxmodel/tess_windows.so"))), Cvoid, 
+                            ccall((:type1373_, LIB_TESS_WINDOWS), Cvoid, 
                             (Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Int64}, Ptr{Int64}), 
                             TimeArray, XIN, OUT, PAR, INFO, ErrorFound)
                         elseif Sys.isapple()
                             if Sys.ARCH == :x86_64
-                                ccall((:type1373_, normpath(joinpath(@__DIR__,"../ghxmodel/tess_intel_mac.so"))), Cvoid, 
+                                ccall((:type1373_, LIB_TESS_INTEL_MAC), Cvoid, 
                                 (Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Int64}, Ptr{Int64}), 
                                 TimeArray, XIN, OUT, PAR, INFO, ErrorFound)   
                             elseif Sys.ARCH == :aarch64
-                                ccall((:type1373_, normpath(joinpath(@__DIR__,"../ghxmodel/tess_arm_mac.so"))), Cvoid, 
+                                ccall((:type1373_, LIB_TESS_ARM_MAC), Cvoid, 
                                 (Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Int64}, Ptr{Int64}), 
                                 TimeArray, XIN, OUT, PAR, INFO, ErrorFound)
                             else
@@ -735,7 +743,7 @@ Run the initial two (2) GHX Fortran subroutines using initialization parameters.
 """
 function init_ghx_calls_2x!(p, TimeArray, XIN, OUT, PAR, INFO)
     # Give full access/permission to the executable .so file (777 is all permissions, 755 is only read/execute by non-owners)
-    lib = normpath(joinpath(@__DIR__,"../ghxmodel/tess_windows.so"))
+    lib = LIB_TESS_WINDOWS
     chmod(lib, filemode(lib) | 0o755)
     # Call the GHX model two times for initialization
     INFO[1] = 1
@@ -751,7 +759,7 @@ function init_ghx_calls_2x!(p, TimeArray, XIN, OUT, PAR, INFO)
         XIN[5] = 1.0
         
         # First time     
-        ccall((:type557_, normpath(joinpath(@__DIR__,"../ghxmodel/dst.so"))), Cvoid, 
+        ccall((:type557_, LIB_DST), Cvoid, 
         (Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Int64}, Ptr{Int64}), 
         TimeArray, XIN, OUT, PAR, INFO, ErrorFound)
         
@@ -759,7 +767,7 @@ function init_ghx_calls_2x!(p, TimeArray, XIN, OUT, PAR, INFO)
         INFO[8] = 3
 
         # Second time
-        ccall((:type557_, normpath(joinpath(@__DIR__,"../ghxmodel/dst.so"))), Cvoid,
+        ccall((:type557_, LIB_DST), Cvoid,
         (Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Int64}, Ptr{Int64}), 
         TimeArray, XIN, OUT, PAR, INFO, ErrorFound)
     elseif p.ghx_model == "TESS"
@@ -771,20 +779,20 @@ function init_ghx_calls_2x!(p, TimeArray, XIN, OUT, PAR, INFO)
 
         # First time
         if Sys.islinux()
-            ccall((:type1373_, normpath(joinpath(@__DIR__,"../ghxmodel/tess_linux.so"))), Cvoid, 
+            ccall((:type1373_, LIB_TESS_LINUX), Cvoid, 
             (Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Int64}, Ptr{Int64}), 
             TimeArray, XIN, OUT, PAR, INFO, ErrorFound)
         elseif Sys.iswindows()
-            ccall((:type1373_, normpath(joinpath(@__DIR__,"../ghxmodel/tess_windows.so"))), Cvoid, 
+            ccall((:type1373_, LIB_TESS_WINDOWS), Cvoid, 
             (Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Int64}, Ptr{Int64}), 
             TimeArray, XIN, OUT, PAR, INFO, ErrorFound)
         elseif Sys.isapple()
             if Sys.ARCH == :x86_64
-                ccall((:type1373_, normpath(joinpath(@__DIR__,"../ghxmodel/tess_intel_mac.so"))), Cvoid, 
+                ccall((:type1373_, LIB_TESS_INTEL_MAC), Cvoid, 
                 (Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Int64}, Ptr{Int64}), 
                 TimeArray, XIN, OUT, PAR, INFO, ErrorFound)    
             elseif Sys.ARCH == :aarch64
-                ccall((:type1373_, normpath(joinpath(@__DIR__,"../ghxmodel/tess_arm_mac.so"))), Cvoid, 
+                ccall((:type1373_, LIB_TESS_ARM_MAC), Cvoid, 
                 (Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Int64}, Ptr{Int64}), 
                 TimeArray, XIN, OUT, PAR, INFO, ErrorFound)
             else
@@ -799,20 +807,20 @@ function init_ghx_calls_2x!(p, TimeArray, XIN, OUT, PAR, INFO)
 
         # Second time
         if Sys.islinux()
-            ccall((:type1373_, normpath(joinpath(@__DIR__,"../ghxmodel/tess_linux.so"))), Cvoid, 
+            ccall((:type1373_, LIB_TESS_LINUX), Cvoid, 
             (Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Int64}, Ptr{Int64}), 
             TimeArray, XIN, OUT, PAR, INFO, ErrorFound)
         elseif Sys.iswindows()
-            ccall((:type1373_, normpath(joinpath(@__DIR__,"../ghxmodel/tess_windows.so"))), Cvoid, 
+            ccall((:type1373_, LIB_TESS_WINDOWS), Cvoid, 
             (Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Int64}, Ptr{Int64}), 
             TimeArray, XIN, OUT, PAR, INFO, ErrorFound)
         elseif Sys.isapple()
             if Sys.ARCH == :x86_64
-                ccall((:type1373_, normpath(joinpath(@__DIR__,"../ghxmodel/tess_intel_mac.so"))), Cvoid, 
+                ccall((:type1373_, LIB_TESS_INTEL_MAC), Cvoid, 
                 (Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Int64}, Ptr{Int64}), 
                 TimeArray, XIN, OUT, PAR, INFO, ErrorFound)    
             elseif Sys.ARCH == :aarch64
-                ccall((:type1373_, normpath(joinpath(@__DIR__,"../ghxmodel/tess_arm_mac.so"))), Cvoid, 
+                ccall((:type1373_, LIB_TESS_ARM_MAC), Cvoid, 
                 (Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Int64}, Ptr{Int64}), 
                 TimeArray, XIN, OUT, PAR, INFO, ErrorFound)
             else
